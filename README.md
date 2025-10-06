@@ -1,82 +1,106 @@
-# aws-lambda-example serverless API
-The aws-lambda-example project, created with [`aws-serverless-java-container`](https://github.com/aws/serverless-java-container).
+# Exemplo de API Serverless com AWS Lambda
 
-The starter project defines a simple `/ping` resource that can accept `GET` requests with its tests.
+Este projeto demonstra como implementar uma API CRUD serverless utilizando Java, AWS Lambda e API Gateway. O deploy pode ser realizado tanto via [SAM CLI](https://github.com/awslabs/aws-sam-cli) quanto diretamente pelo console web da AWS, facilitando o entendimento para fins didáticos.
 
-The project folder also includes a `template.yml` file. You can use this [SAM](https://github.com/awslabs/serverless-application-model) file to deploy the project to AWS Lambda and Amazon API Gateway or test in local with the [SAM CLI](https://github.com/awslabs/aws-sam-cli). 
+## Sumário
 
-## Pre-requisites
-* [AWS CLI](https://aws.amazon.com/cli/)
-* [SAM CLI](https://github.com/awslabs/aws-sam-cli)
-* [Gradle](https://gradle.org/) or [Maven](https://maven.apache.org/)
+- [Pré-requisitos](#pré-requisitos)
+- [Passo a passo de implementação](#passo-a-passo-de-implementação)
+- [Testando localmente](#testando-localmente)
+- [Deploy na AWS via Console Web](#deploy-na-aws-via-console-web)
+- [Testando na AWS](#testando-na-aws)
+- [Referências](#referências)
 
-## Building the project
-You can use the SAM CLI to quickly build the project
-```bash
-$ mvn archetype:generate -DartifactId=aws-lambda-example -DarchetypeGroupId=com.amazonaws.serverless.archetypes -DarchetypeArtifactId=aws-serverless-jersey-archetype -DarchetypeVersion=2.0.2 -DgroupId=org.example -Dversion=1.0-SNAPSHOT -Dinteractive=false
-$ cd aws-lambda-example
-$ sam build
-Building resource 'AwsLambdaExampleFunction'
-Running JavaGradleWorkflow:GradleBuild
-Running JavaGradleWorkflow:CopyArtifacts
+## Pré-requisitos
 
-Build Succeeded
+- Conta na AWS
+- [Java 11+](https://www.oracle.com/java/technologies/downloads/)
+- [Gradle](https://gradle.org/) ou [Maven](https://maven.apache.org/)
+- [SAM CLI](https://github.com/awslabs/aws-sam-cli) (opcional para testes locais)
+- [AWS CLI](https://aws.amazon.com/cli/) (opcional)
 
-Built Artifacts  : .aws-sam/build
-Built Template   : .aws-sam/build/template.yaml
+## Passo a passo de implementação
 
-Commands you can use next
-=========================
-[*] Invoke Function: sam local invoke
-[*] Deploy: sam deploy --guided
-```
+1. **Criação do Projeto**
+   - Gere o projeto base usando o archetype serverless da AWS:
+     ```bash
+     mvn archetype:generate -DartifactId=aws-lambda-example -DarchetypeGroupId=com.amazonaws.serverless.archetypes -DarchetypeArtifactId=aws-serverless-jersey-archetype -DarchetypeVersion=2.0.2 -DgroupId=org.example -Dversion=1.0-SNAPSHOT -Dinteractive=false
+     cd aws-lambda-example
+     ```
 
-## Testing locally with the SAM CLI
+2. **Implementação das Operações CRUD**
+   - Crie uma classe de modelo (exemplo: `Pet.java`).
+   - Implemente um recurso REST (exemplo: `PetResource.java`) com métodos para:
+     - `GET /pets` - Listar todos
+     - `GET /pets/{id}` - Buscar por ID
+     - `POST /pets` - Criar novo
+     - `PUT /pets/{id}` - Atualizar
+     - `DELETE /pets/{id}` - Remover
 
-From the project root folder - where the `template.yml` file is located - start the API with the SAM CLI.
+   - Exemplo de método:
+     ```java
+     @POST
+     @Path("/pets")
+     public Response createPet(Pet pet) {
+         // lógica para salvar o pet
+         return Response.status(Response.Status.CREATED).entity(pet).build();
+     }
+     ```
 
-```bash
-$ sam local start-api
+3. **Configuração do Handler Lambda**
+   - Certifique-se que o handler (`StreamLambdaHandler.java`) está configurado para expor os recursos REST.
 
-...
-Mounting com.amazonaws.serverless.archetypes.StreamLambdaHandler::handleRequest (java11) at http://127.0.0.1:3000/{proxy+} [OPTIONS GET HEAD POST PUT DELETE PATCH]
-...
-```
+4. **Build do Projeto**
+   - Compile o projeto:
+     ```bash
+     sam build
+     ```
 
-Using a new shell, you can send a test ping request to your API:
+## Testando localmente
 
-```bash
-$ curl -s http://127.0.0.1:3000/ping | python -m json.tool
+- Inicie a API localmente:
+  ```bash
+  sam local start-api
+  ```
+- Teste os endpoints usando `curl`:
+  ```bash
+  curl -X POST http://127.0.0.1:3000/pets -d '{"name":"Rex"}' -H "Content-Type: application/json"
+  curl http://127.0.0.1:3000/pets
+  ```
 
-{
-    "pong": "Hello, World!"
-}
-``` 
+## Deploy na AWS via Console Web
 
-## Deploying to AWS
-To deploy the application in your AWS account, you can use the SAM CLI's guided deployment process and follow the instructions on the screen
+1. **Empacote o projeto**
+   - Gere o arquivo `.jar` usando Maven ou Gradle.
 
-```
-$ sam deploy --guided
-```
+2. **Console AWS**
+   - Acesse o [AWS Lambda](https://console.aws.amazon.com/lambda).
+   - Crie uma nova função Lambda:
+     - Escolha "Autor do zero".
+     - Runtime: Java 11.
+     - Faça upload do arquivo `.jar` gerado.
+   - Configure o API Gateway:
+     - Crie uma nova API REST.
+     - Integre os métodos HTTP aos endpoints Lambda correspondentes.
+     - Defina os métodos e paths conforme o CRUD.
 
-Once the deployment is completed, the SAM CLI will print out the stack's outputs, including the new application URL. You can use `curl` or a web browser to make a call to the URL
+3. **Permissões**
+   - Ajuste as permissões da função Lambda conforme necessário (exemplo: acesso ao DynamoDB, se utilizado).
 
-```
-...
--------------------------------------------------------------------------------------------------------------
-OutputKey-Description                        OutputValue
--------------------------------------------------------------------------------------------------------------
-AwsLambdaExampleApi - URL for application            https://xxxxxxxxxx.execute-api.us-west-2.amazonaws.com/Prod/pets
--------------------------------------------------------------------------------------------------------------
-```
+## Testando na AWS
 
-Copy the `OutputValue` into a browser or use curl to test your first request:
+- Após o deploy, copie a URL gerada pelo API Gateway.
+- Teste os endpoints usando `curl` ou Postman:
+  ```bash
+  curl -X POST https://<api-id>.execute-api.<region>.amazonaws.com/Prod/pets -d '{"name":"Rex"}' -H "Content-Type: application/json"
+  curl https://<api-id>.execute-api.<region>.amazonaws.com/Prod/pets
+  ```
 
-```bash
-$ curl -s https://xxxxxxx.execute-api.us-west-2.amazonaws.com/Prod/ping | python -m json.tool
+## Referências
 
-{
-    "pong": "Hello, World!"
-}
-```
+- [AWS Lambda](https://docs.aws.amazon.com/lambda/latest/dg/welcome.html)
+- [API Gateway](https://docs.aws.amazon.com/apigateway/latest/developerguide/welcome.html)
+- [aws-serverless-java-container](https://github.com/aws/serverless-java-container)
+
+---
+> Este projeto é para fins didáticos e pode ser expandido conforme sua necessidade.
